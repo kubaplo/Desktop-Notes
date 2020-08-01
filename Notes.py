@@ -8,6 +8,12 @@ class Autostart:
         self.path = sys.argv[0].replace("/", "\\")
         self.dest_path = f"C:/Users/{getpass.getuser()}/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup/"
 
+        # Always pass data to files in encoded (bytes) format. If not - errors with non-ascii chars may occur!
+        # File mode  >chcp 65001<  is needed (!) to properly handle non-ascii chars (which may appear in .bat file path)
+        self.filecontent = "@echo off\n" \
+                           "chcp 65001\n" \
+                           f"START \"\" \"{self.path}\"".encode()
+
         if not self.autostart_exists():
             self.create_autostart()
 
@@ -15,10 +21,8 @@ class Autostart:
     def create_autostart(self):
         filename = "DesktopNotes.bat"
 
-        with open(self.dest_path + filename, "w") as file:
-            file.write("@echo off")
-            file.write("\n")
-            file.write(f"START \"\" \"{self.path}\"")
+        with open(self.dest_path + filename, "wb") as file:
+            file.write(self.filecontent)
 
 
     def autostart_exists(self):
@@ -28,11 +32,12 @@ class Autostart:
             for file in scan:
                 if ".bat" in file.name:
                     try:
-                        with open(self.dest_path + file.name) as temp:
+                        with open(self.dest_path + file.name, "rb") as temp:
                             data = temp.read()
 
-                        if data == f"@echo off\nSTART \"\" \"{self.path}\"":
+                        if data == self.filecontent:
                             exists = True
+                            break
                     except:
                         pass
 
@@ -41,13 +46,14 @@ class Autostart:
 
 
 class SettingsWindow(QMainWindow):
-    def __init__(self, position, size, conf, all_widgets):
+    def __init__(self, position, size, conf, all_widgets, available_fonts):
         super().__init__()
         self.path = "/".join(sys.argv[0].replace("\\", "/").split("/")[:-1])
         self.main_position = position
         self.main_size = size
         self.configuration = conf
         self.all_widgets = all_widgets
+        self.available_fonts = available_fonts
         self.setup()
 
 
@@ -173,7 +179,7 @@ class SettingsWindow(QMainWindow):
                 box.resize(200, box.height())
                 box.move(5 + label.width() + 10, 7 + 40*i)
 
-                for font_name in QtGui.QFontDatabase().families():
+                for font_name in self.available_fonts:
                     box.addItem(font_name)
 
                 box.setCurrentText(self.configuration['font_family'])
@@ -278,6 +284,11 @@ class NoteApp(QMainWindow):
 
 
     def load_data(self):
+        #Need to check for available fonts here (in main window) and pass them to the SettingsWindow.
+        #There are differences between available fonts in NoteApp window & SettingsWindow (two different types of windows).
+        #QtGui.QFontDatabase().families() returns available fonts for window in which was called!
+        self.available_fonts = QtGui.QFontDatabase().families()
+
         self.configuration = {}
 
         def get_default_settings():
@@ -358,9 +369,8 @@ class NoteApp(QMainWindow):
             except:
                 self.configuration['font_size'] = "20"
             #--------------------------------------------------
-            font_families = QtGui.QFontDatabase().families()
             try:
-                if not (self.configuration['font_family'] in font_families):
+                if not (self.configuration['font_family'] in self.available_fonts):
                     self.configuration['font_family'] = "Bahnschrift Light"
             except KeyError:
                 get_default_settings()
@@ -489,7 +499,7 @@ class NoteApp(QMainWindow):
         def settings_window():
             position = (self.x(), self.y())
             size = (self.width(), self.height())
-            self.settings_window = SettingsWindow(position, size, self.configuration, self.all_widgets)
+            self.settings_window = SettingsWindow(position, size, self.configuration, self.all_widgets, self.available_fonts)
             self.settings_window.show()
 
 
