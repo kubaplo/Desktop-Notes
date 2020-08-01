@@ -1,6 +1,6 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtWidgets import QApplication, QMainWindow
-import sys, time, getpass, os
+import sys, time, getpass, os, re
 
 
 class Autostart:
@@ -278,26 +278,130 @@ class NoteApp(QMainWindow):
 
 
     def load_data(self):
-        with open(f"{self.path}/conf.data", "r") as file:
-            data = file.read()
-
-        data = data.split("\n")[:-1]
-
         self.configuration = {}
-        stop = False
-        value = ""
-        key = ""
-        for line in data:
-            if key == "text":
-                stop = True
-                value += "\n" + line
 
-            if not stop:
-                key = line.split(":")[0]
-                value = ":".join(line.split(":")[1:])
+        def get_default_settings():
+            self.configuration = {}
+            self.configuration['size'] = "300,400"
+            self.configuration['position'] = f"{1920 - 300 - 20},20"
+            self.configuration['background'] = "#3f3f3f"
+            self.configuration['border'] = "#323232"
+            self.configuration['font_color'] = "#499c54"
+            self.configuration['font_size'] = "20"
+            self.configuration['font_family'] = "Bahnschrift Light"
+            self.configuration['text'] = "Create Your Note!"
+
+            with open(f"{self.path}/conf.data", "w") as file:
+                for key in self.configuration:
+                    file.write(key)
+                    file.write(":")
+                    file.write(self.configuration[key])
+                    file.write("\n")
 
 
-            self.configuration[key] = value
+        def validate():
+            try:
+                x, y = self.configuration['size'].split(",")
+                x = int(x)
+                y = int(y)
+                if not (50 <= x <= 1920 and 50 <= y <= 1080):
+                    self.configuration['size'] = "300,400"
+
+            except KeyError:
+                get_default_settings()
+            except:
+                self.configuration['size'] = "300,400"
+            #--------------------------------------------------
+            try:
+                x, y = self.configuration['position'].split(",")
+                x = int(x)
+                y = int(y)
+                if not (-40 < x < 1910 and -10 < y < 1070):
+                    self.configuration['position'] = f"{1920 - 300 - 20},20"
+
+            except KeyError:
+                get_default_settings()
+            except:
+                self.configuration['position'] = f"{1920 - 300 - 20},20"
+            #--------------------------------------------------
+            pattern = re.compile("#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})")
+            try:
+                if not pattern.fullmatch(self.configuration['background']):
+                    self.configuration['background'] = "#3f3f3f"
+            except KeyError:
+                get_default_settings()
+            except:
+                self.configuration['background'] = "#3f3f3f"
+            try:
+                if not pattern.fullmatch(self.configuration['border']):
+                    self.configuration['border'] = "#323232"
+            except KeyError:
+                get_default_settings()
+            except:
+                self.configuration['border'] = "#323232"
+            try:
+                if not pattern.fullmatch(self.configuration['font_color']):
+                    self.configuration['font_color'] = "#499c54"
+            except KeyError:
+                get_default_settings()
+            except:
+                self.configuration['font_color'] = "#499c54"
+            #--------------------------------------------------
+            try:
+                x = self.configuration['font_size']
+                x = int(x)
+                if not (1 <= x <= 200):
+                    self.configuration['font_size'] = "20"
+
+            except KeyError:
+                get_default_settings()
+            except:
+                self.configuration['font_size'] = "20"
+            #--------------------------------------------------
+            font_families = QtGui.QFontDatabase().families()
+            try:
+                if not (self.configuration['font_family'] in font_families):
+                    self.configuration['font_family'] = "Bahnschrift Light"
+            except KeyError:
+                get_default_settings()
+            except:
+                self.configuration['font_family'] = "Bahnschrift Light"
+
+
+
+
+        if os.path.exists(f"{self.path}/conf.data"):
+            try:
+                with open(f"{self.path}/conf.data", "r") as file:
+                    data = file.read()
+
+                data = data.split("\n")[:-1]
+
+                stop = False
+                value = ""
+                key = ""
+                for line in data:
+                    if key == "text":
+                        stop = True
+                        value += "\n" + line
+
+                    if not stop:
+                        key = line.split(":")[0]
+                        value = ":".join(line.split(":")[1:])
+
+                    self.configuration[key] = value
+
+                validate()
+
+
+
+            except:
+                get_default_settings()
+
+
+        else:
+            get_default_settings()
+
 
 
     def main_page(self):
@@ -634,14 +738,9 @@ class NoteApp(QMainWindow):
 
 
 if __name__ == '__main__':
-    try:
-        autostart = Autostart()
+    autostart = Autostart()
 
-        app = QApplication(sys.argv)
-        notes_app = NoteApp()
-        notes_app.show()
-        sys.exit(app.exec_())
-
-    except Exception as e:
-        with open("debug_log.txt", "w") as file:
-            file.write(e.__str__())
+    app = QApplication(sys.argv)
+    notes_app = NoteApp()
+    notes_app.show()
+    sys.exit(app.exec_())
