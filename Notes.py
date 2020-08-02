@@ -12,7 +12,8 @@ class Autostart:
         # File mode  >chcp 65001<  is needed (!) to properly handle non-ascii chars (which may appear in .bat file path)
         self.filecontent = "@echo off\n" \
                            "chcp 65001\n" \
-                           f"START \"\" \"{self.path}\"".encode()
+                           f"IF EXIST \"{self.path}\" (" \
+                           f"START \"\" \"{self.path}\")".encode()
 
         if not self.autostart_exists():
             self.create_autostart()
