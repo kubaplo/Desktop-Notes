@@ -749,7 +749,8 @@ class NoteApp(QMainWindow):
 
 
 if __name__ == '__main__':
-    autostart = Autostart()
+    # Uncomment to launch application on startup:
+    #autostart = Autostart()
 
     app = QApplication(sys.argv)
     notes_app = NoteApp()
